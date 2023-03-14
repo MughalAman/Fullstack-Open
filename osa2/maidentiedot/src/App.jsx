@@ -2,6 +2,8 @@ import React from 'react'
 import {useState, useEffect} from 'react'
 import axios from 'axios'
 
+const api_key = import.meta.env.VITE_API_KEY
+
 const Filter = ({handleFilterChange}) => {
   return (
     <div>
@@ -10,22 +12,46 @@ const Filter = ({handleFilterChange}) => {
   )
 }
 
-const Country = ({country}) => {
+const Weather = (latlng) => {
+  const [weather, setWeather] = useState([])
+  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latlng.latlng[0]}&lon=${latlng.latlng[1]}&appid=${api_key}&units=metric`
+
+  useEffect(() => {
+    axios.get(url).then(response => {
+      setWeather(response.data)
+    })
+  }, [url])
+
   return (
     <div>
-      <h2>{country.name}</h2>
-      <p>capital {country.capital}</p>
+      {weather.main && <div>
+        <h3>Weather in {weather.name}</h3>
+        <p>temperature: {weather.main.temp} Celsius</p>
+        <img src={`http://openweathermap.org/img/w/${weather.weather[0].icon}.png`} alt={weather.weather[0].description} />
+        <p>wind: {weather.wind.speed} m/s</p>
+      </div>}
+  </div>
+  )
+}
+
+const Country = ({country}) => {
+
+  return (
+    <div>
+      <h2>{country.name.common}</h2>
+      <p>capital {country.capital[0]}</p>
       <p>population {country.population}</p>
       <h3>languages</h3>
       <ul>
-        {country.languages.map(language => <li key={language.name}>{language.name}</li>)}
+        {Object.values(country.languages).map(language => <li key={language}>{language}</li>)}
       </ul>
-      <img src={country.flag} alt={`flag of ${country.name}`} width="100" />
+      <img src={country.flags.svg} alt={country.flags.alt} width="100" />
+      <Weather latlng={country.latlng}/>
     </div>
   )
 }
 
-const Countries = ({countries}) => {
+const Countries = ({countries, setFilteredCountries}) => {
   if (countries.length > 10) {
     return (
       <div>
@@ -41,7 +67,7 @@ const Countries = ({countries}) => {
   } else {
     return (
       <div>
-        {countries.map(country => <div key={country.name}>{country.name}</div>)}
+        {countries.map(country => <div key={country.name.common}>{country.name.common} <button onClick={() => {setFilteredCountries([country])}}>show</button></div>)}
       </div>
     )
   }
@@ -54,7 +80,8 @@ function App() {
 
   const handleFilterChange = (event) => {
     const filterStr = event.target.value
-    const filteredCountries = countries.filter(country => country.name.common.toString().toLowerCase().includes(filterStr.toString().toLowerCase()))
+    const filteredCountries = countries.filter(country => country.name.common.toLowerCase().includes(filterStr.toLowerCase()))
+    setFilteredCountries(filteredCountries)
   }
 
   useEffect(() => {
@@ -67,7 +94,7 @@ function App() {
   return (
     <div>
       <Filter handleFilterChange={handleFilterChange} />
-      <Countries countries={filteredCountries} />
+      <Countries countries={filteredCountries} setFilteredCountries={setFilteredCountries}/>
     </div>
   )
 }
