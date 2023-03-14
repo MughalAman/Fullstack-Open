@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getAll, create, deletePerson, update } from './serverCommunicator'
+import Alert from './Alert'
 
 const Persons = ({ persons, handleDeletePerson }) => {
   return (
@@ -44,6 +45,9 @@ const App = () => {
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
 
+  const [alertType, setAlertType] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+
   const filterPersons = (event) => {
     const filtered = persons.filter((person) =>
       person.name.toLowerCase().includes(event.target.value.toLowerCase())
@@ -59,13 +63,29 @@ const App = () => {
     };
 
     if (persons.some((person) => person.name === newName)) {
-      alert(`${newName} is already added to phonebook`);
+        const person = persons.find((person) => person.name === newName);
+        update(person.id, personObject).then((returnedPerson) => {
+          setPersons(persons.map((person) => person.id !== returnedPerson.id ? person : returnedPerson));
+          setFilteredPersons(filteredPersons.map((person) => person.id !== returnedPerson.id ? person : returnedPerson));
+          setNewName("");
+          setNewNumber("");
+          setAlertType("success");
+          setAlertMessage(`Updated ${returnedPerson.name}`);
+        }).catch((error) => {
+          setAlertType("error");
+          setAlertMessage(error.message);
+        });
     } else {
       create(personObject).then((returnedPerson) => {
         setPersons(persons.concat(returnedPerson));
         setFilteredPersons(filteredPersons.concat(returnedPerson));
         setNewName("");
         setNewNumber("");
+        setAlertType("success");
+        setAlertMessage(`Added ${returnedPerson.name}`);
+      }).catch((error) => {
+        setAlertType("error");
+        setAlertMessage(error.message);
       });
     }
   };
@@ -76,6 +96,12 @@ const App = () => {
       deletePerson(id).then(() => {
         setPersons(persons.filter((person) => person.id !== id));
         setFilteredPersons(filteredPersons.filter((person) => person.id !== id));
+        setAlertType("success");
+        setAlertMessage(`Deleted ${person.name}`);
+      }).catch((error) => {
+        console.log(error);
+        setAlertType("error");
+        setAlertMessage(`Information of ${person.name} has already been removed from server: ${error.message}`);
       });
     }
   };
@@ -84,6 +110,9 @@ const App = () => {
     getAll().then((initialPersons) => {
       setPersons(initialPersons);
       setFilteredPersons(initialPersons);
+    }).catch((error) => {
+      setAlertType("error");
+      setAlertMessage(error.message);
     });
   }, [])
 
@@ -91,6 +120,9 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+
+      <Alert alertType={alertType} alertMessage={alertMessage}/>
+
       <Filter filterPersons={filterPersons} />
 
       <h3>Add a new</h3>
